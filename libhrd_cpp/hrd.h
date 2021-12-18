@@ -241,6 +241,45 @@ static inline uint32_t hrd_fastrand(uint64_t* seed) {
   return static_cast<uint32_t>((*seed) >> 32);
 }
 
+double hrd_zipf_arr[1 << 23];
+static inline uint32_t hrd_hotspot_rand(double data){
+    static uint32_t period_offset = 1 << 22;
+    static uint32_t period_flag = 0;
+    static uint32_t period_counter = 0;
+    const uint32_t hotspot_period = 5000;
+
+    uint32_t index = 0;
+    while(data > hrd_zipf_arr[index])
+        index++;
+    index = index + (period_flag ? period_offset : 0);
+
+    period_counter++;
+    if(period_counter >= hotspot_period){
+        period_counter = 0;
+        period_flag = ~period_flag;
+    }
+
+    return index > KEY_RANGE ? (index - KEY_RANGE) : (index);
+}
+
+void hrd_zipf_generate(){
+//   const int KEY_RANGE = 1 << 23;
+  const double alpha = 1.001;
+  const double CCC = 1;
+  double sum = 0.0;
+    for(int i = 0; i < KEY_RANGE; i++) {
+        sum += CCC / pow((double)(i+2), alpha);
+    }
+    for(int i = 0; i < KEY_RANGE; i++) {
+        if (i == 0) {
+            hrd_zipf_arr[i] = CCC / pow((double)(i+2), alpha) / sum;
+        }
+        else {
+            hrd_zipf_arr[i] = hrd_zipf_arr[i-1] + CCC / pow((double)(i+2), alpha) / sum;
+        }
+    }
+}
+
 static inline size_t hrd_get_cycles() {
   uint64_t rax;
   uint64_t rdx;

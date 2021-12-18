@@ -120,6 +120,8 @@ void* run_client(void* arg) {
                         cb->dgram_buf_mr->lkey);
   }
 
+  hrd_zipf_generate(); /* generate the CDF array of zipf distribution */
+
   while (1) {
     if (rolling_iter >= K_512) {
       clock_gettime(CLOCK_REALTIME, &end);
@@ -158,6 +160,7 @@ void* run_client(void* arg) {
 
     /* Forge the HERD request */
     key_i = hrd_fastrand(&seed) % HERD_NUM_KEYS; /* Choose a key */
+    key_i = hrd_hotspot_rand((double)key_i / HERD_NUM_KEYS); /* Generate the key with hotspot included */     
 
     *(uint128*)req_buf = CityHash128((char*)&key_arr[key_i], 4);
     req_buf->opcode = is_update ? HERD_OP_PUT : HERD_OP_GET;
